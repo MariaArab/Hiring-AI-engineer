@@ -1,0 +1,69 @@
+
+import numpy as np
+
+def generate_data(n_samples, noise_std):
+  """Generates sample data for GP regression."""
+  x = np.linspace(0, 10, n_samples)
+  y = np.sin(x) + noise_std * np.random.randn(n_samples)
+  return x, y
+
+import matplotlib.pyplot as plt
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import RBF, Matern, ConstantKernel as C
+
+
+def gp_regression(x, y, kernel):
+  """Performs Gaussian Process regression with a specified kernel."""
+  gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=10)
+  gp.fit(x.reshape(-1, 1), y)
+  x_pred = np.linspace(x.min(), x.max(), 100)
+  y_pred, y_std = gp.predict(x_pred.reshape(-1, 1), return_std=True)
+  return x_pred, y_pred, y_std
+
+
+def plot_gp(x, y, x_pred, y_pred, y_std, kernel_name):
+  """Plots the data, GP fit, and confidence interval."""
+  plt.plot(x, y, 'kx', label='Data')
+  plt.plot(x_pred, y_pred, label=f'GP fit ({kernel_name})')
+  plt.fill_between(x_pred, y_pred - 1.96 * y_std, y_pred + 1.96 * y_std, alpha=0.2, label='95% CI')
+  plt.legend()
+  plt.show()
+
+
+# Generate sample data
+x, y = generate_data(20, 0.5)
+
+# Perform GP regression with different kernels
+kernels = [C(1.0, (1e-3, 1e3)) * RBF(10, (1e-2, 1e2)),
+          C(1.0, (1e-3, 1e3)) * Matern(length_scale=[10], nu=2.5)]
+
+for kernel in kernels:
+  x_pred, y_pred, y_std = gp_regression(x, y, kernel)
+  plot_gp(x, y, x_pred, y_pred, y_std, kernel.__class__.__name__)
+
+
+def gp_regression_general(data, kernel):
+  """Performs GP regression with a specified kernel on general data."""
+  x, y = data
+  gp = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=10)
+  gp.fit(x.reshape(-1, 1), y)
+  x_pred = np.linspace(x.min(), x.max(), 100)
+  y_pred, y_std = gp.predict(x_pred.reshape(-1, 1), return_std=True)
+  return x_pred, y_pred, y_std
+
+
+def plot_gp_general(data, x_pred, y_pred, y_std, kernel_name):
+  """Plots the data, GP fit, and confidence interval for general data."""
+  plt.plot(data[0], data[1], 'kx', label='Data')  # Access x and y directly from data
+  plt.plot(x_pred, y_pred, label=f'GP fit ({kernel_name})')
+  plt.fill_between(x_pred, y_pred - 1.96 * y_std, y_pred + 1.96 * y_std, alpha=0.2, label='95% CI')
+  plt.legend()
+  plt.show()
+
+
+# Example usage
+data = generate_data(20, 0.5)
+kernel = C(1.0, (1e-3, 1e3)) * RBF(10, (1e-2, 1e2))
+x_pred, y_pred, y_std = gp_regression_general(data, kernel)
+plot_gp_general(data, x_pred, y_pred, y_std, kernel.__class__.__name__)
+
